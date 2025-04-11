@@ -1,7 +1,10 @@
-"use client"
-import { useEffect, useState } from 'react';
-import axios from 'axios';
-import { useRouter } from 'next/navigation';
+"use client";
+
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useRouter } from "next/navigation";
+import { fetchTodoLists, createTodoList } from "../../redux/slice/todoSlice";
+import { AppDispatch } from "../../redux/store";
 
 interface TodoList {
   id: number;
@@ -11,39 +14,15 @@ interface TodoList {
 }
 
 const TodoListsPage = () => {
-  const [todoLists, setTodoLists] = useState<TodoList[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
-  const [newListTitle, setNewListTitle] = useState<string>('');
-
+  const [newListTitle, setNewListTitle] = useState<string>("");
+  const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
 
+  const { todoLists, loading, error } = useSelector((state: { todo: { todoLists: TodoList[]; loading: boolean; error: string | null } }) => state.todo);
+
   useEffect(() => {
-    const fetchTodoLists = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          setError('Вам потрібно увійти для перегляду списків');
-          setLoading(false);
-          return;
-        }
-
-        const response = await axios.get('http://localhost:5000/todo-lists', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        setTodoLists(response.data.todoLists);
-        setLoading(false);
-      } catch {
-        setError('Не вдалося отримати списки');
-        setLoading(false);
-      }
-    };
-
-    fetchTodoLists();
-  }, []);
+      dispatch(fetchTodoLists());
+  }, [dispatch]);
 
   const handleClick = (id: number) => {
     router.push(`/list/${id}`);
@@ -52,33 +31,13 @@ const TodoListsPage = () => {
   const handleCreateList = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setError('Вам потрібно увійти для створення списку');
-      return;
-    }
-
-    try {
-      const response = await axios.post(
-        'http://localhost:5000/todo-lists',
-        { title: newListTitle },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      setTodoLists([...todoLists, response.data.list]);
-      setNewListTitle('');
-    } catch {
-      setError('Не вдалося створити список');
-    }
+    dispatch(createTodoList({ title: newListTitle }));
+    setNewListTitle("");
   };
 
   return (
     <div className="max-w-4xl mx-auto py-6">
-      <h1 className="text-3xl font-semibold mb-4">Ваші To-Do списки</h1>
+      <h1 className="text-3xl font-semibold mb-4 text-[var(--foreground)]">Ваші To-Do списки</h1>
 
       {loading && <div>Завантаження...</div>}
       {error && <div className="text-red-500">{error}</div>}
@@ -90,12 +49,12 @@ const TodoListsPage = () => {
             value={newListTitle}
             onChange={(e) => setNewListTitle(e.target.value)}
             placeholder="Назва нового списку"
-            className="p-2 border rounded-md w-full"
+            className="p-2 border rounded-md w-full bg-[var(--input)] text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]"
             required
           />
           <button
             type="submit"
-            className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="ml-4 px-4 py-2 w-full bg-[var(--primary)] text-[var(--primary-foreground)] rounded-md hover:bg-[var(--primary-dark)] transition duration-200 ease-in-out"
           >
             Створити список
           </button>
@@ -103,13 +62,13 @@ const TodoListsPage = () => {
       </form>
 
       <div className="space-y-4">
-        {todoLists.map((list) => (
-          <div key={list.id} className="bg-white shadow-md rounded-lg p-4">
-            <h2 className="text-xl font-semibold">{list.title}</h2>
-            <p className="text-sm text-gray-500">Створено: {new Date(list.createdAt).toLocaleString()}</p>
-            <p className="text-sm text-gray-500">Останнє оновлення: {new Date(list.updatedAt).toLocaleString()}</p>
+        {todoLists.map((list: TodoList) => (
+          <div key={list.id} className="bg-[var(--card)] shadow-md rounded-lg p-4">
+            <h2 className="text-xl font-semibold text-[var(--foreground)]">{list.title}</h2>
+            <p className="text-sm text-[var(--muted-foreground)]">Створено: {new Date(list.createdAt).toLocaleString()}</p>
+            <p className="text-sm text-[var(--muted-foreground)]">Останнє оновлення: {new Date(list.updatedAt).toLocaleString()}</p>
             <button
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              className="mt-4 px-4 py-2 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-md hover:bg-[var(--primary-dark)] transition duration-200 ease-in-out"
               onClick={() => handleClick(list.id)}
             >
               Переглянути завдання
@@ -122,3 +81,4 @@ const TodoListsPage = () => {
 };
 
 export default TodoListsPage;
+
